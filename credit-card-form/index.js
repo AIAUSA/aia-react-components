@@ -60,7 +60,6 @@ class CreditCardForm extends React.Component {
     componentDidMount() {
         const script = document.createElement("script");
 
-        //script.src = "//js.authorize.net/v1/Accept.js";
         script.src = "https://js.authorize.net/v1/Accept.js";
         script.async = true;
 
@@ -95,7 +94,6 @@ class CreditCardForm extends React.Component {
         //authData.apiLoginID = $scope.reg.CCLogin;
         secureData.authData = authData;
 
-        //console.log(secureData);
         // Pass the card number and expiration date to Accept.js for submission to Authorize.Net.
         Accept.dispatchData(secureData, function(response) { callback(response) });
     }
