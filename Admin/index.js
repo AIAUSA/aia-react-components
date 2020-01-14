@@ -91,9 +91,10 @@ class AdminPage extends Component {
         });
       });
     } else {
+      var usersList = [];
       this.props.firebase.pending().on('value', snapshot => {
         const usersObject = snapshot.val();
-        const usersList = Object.keys(usersObject).map(key => ({
+        usersList = Object.keys(usersObject).map(key => ({
           ...usersObject[key],
           uid: key,
         }));
@@ -236,7 +237,7 @@ const PendingList = ({ users, deleteUser, editUser, editUID, roles, editRole, ad
                   {user.roles}
               </td>
               <td>
-                {!user.roles.includes(ROLES.SUPERADMIN) &&
+                {user.roles && !user.roles.includes(ROLES.SUPERADMIN) &&
                   <button onClick={(evt) => deleteUser(user.uid, evt)}>
                     <FontAwesomeIcon icon={faTrash} />
                   </button>
