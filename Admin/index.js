@@ -7,7 +7,7 @@ import { withAuthorization } from '../../.app-core/Session';
 import { withFirebase } from '../../.app-core/Firebase';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faPlus, faEdit } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faPlus, faEdit, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { Table, Col, Row, CardHeader, CardBody, Card, Input } from 'reactstrap';
 
 import jsonData from './../../../constants/roles.json'
@@ -22,7 +22,8 @@ class AdminPage extends Component {
       newUser: '',
       newUserRole: '',
       editUID: '',
-      editRole: ''
+      editRole: '',
+      pending: false
     };
   }
 
@@ -52,8 +53,8 @@ class AdminPage extends Component {
   }
 
   addUser = () => {
-    var email = this.state.newUser.replace("@", "").replace(/\./g,"");
-    this.props.firebase.checkRole(email).set({ role: this.state.newUserRole });
+    var email = this.state.newUser.replace("@", "*").replace(/\./g,"++");
+    this.props.firebase.checkRole(email).set({ roles: this.state.newUserRole });
     this.setState({newUser: '', newUserRole: '' });
   }
 
@@ -74,6 +75,36 @@ class AdminPage extends Component {
     this.props.firebase.user(uid).update({roles: roles});
     this.setState({editRole: '', editUID: '' });
   }
+  viewPending = () => {
+    this.setState({pending: !this.state.pending })
+    if (this.state.pending) {
+      this.props.firebase.users().on('value', snapshot => {
+        const usersObject = snapshot.val();
+        const usersList = Object.keys(usersObject).map(key => ({
+          ...usersObject[key],
+          uid: key,
+        }));
+  
+        this.setState({
+          users: usersList,
+          loading: false,
+        });
+      });
+    } else {
+      this.props.firebase.pending().on('value', snapshot => {
+        const usersObject = snapshot.val();
+        const usersList = Object.keys(usersObject).map(key => ({
+          ...usersObject[key],
+          uid: key,
+        }));
+  
+        this.setState({
+          users: usersList,
+          loading: false,
+        });
+      });
+    }
+  }
 
   render() {
     const { users, loading } = this.state;
@@ -89,27 +120,41 @@ class AdminPage extends Component {
               </CardHeader>
               <CardBody>
                 <Row className="col-12">
-                  <Col xs="5">&nbsp;</Col>
+                  <Col xs="4">&nbsp;</Col>
                   <Col xs="3" offset="5">
                     <Input type="email" value={this.state.newUser} onChange={this.handleInputChange} />
                   </Col>
                   <Col xs="3">
-                    <Input type="select" id="role" value={this.state.newUserRole} onChange={this.handleNewRolChange}>
+                    <Input type="select" id="role" value={this.state.newUserRole} onChange={this.handleNewRoleChange}>
                       { roles.map(r => (
-                          <option value={r}>{r}</option>
+                          <option key={r} value={r}>{r}</option>
                       ))}
                     </Input>
                   </Col>
-                  <Col xs="1">
-                    <button onClick={(evt) => this.addUser("Test")}>
+                  <Col xs="2">
+                    <button onClick={(evt) => this.addUser()} className="mr-2">
                       <FontAwesomeIcon icon={faPlus} />
+                    </button>
+                    <button onClick={(evt) => this.viewPending()}>
+                      { !this.state.pending && (
+                        <FontAwesomeIcon icon={faEye} />
+                      )}
+                      { this.state.pending && (
+                        <FontAwesomeIcon icon={faEyeSlash} />
+                      )}
                     </button>
                   </Col>
                 </Row>
               </CardBody>
               <CardBody>
-                <UserList users={users} deleteUser={this.deleteUser} editUser={this.editUser} editUID={this.state.editUID}
-                   roles={roles} editRole={this.state.editRole} roleEdit={this.handleRoleEdit} addRole={this.addRole} />
+                { !this.state.pending && (
+                  <UserList users={this.state.users} deleteUser={this.deleteUser} editUser={this.editUser} editUID={this.state.editUID}
+                     roles={roles} editRole={this.state.editRole} roleEdit={this.handleRoleEdit} addRole={this.addRole} />
+                )}
+                { this.state.pending && (
+                  <PendingList users={this.state.users} deleteUser={this.deleteUser} editUser={this.editUser} editUID={this.state.editUID}
+                     roles={roles} editRole={this.state.editRole} roleEdit={this.handleRoleEdit} addRole={this.addRole} />
+                )}
               </CardBody>
             </Card>
           </Col>
@@ -160,6 +205,37 @@ const UserList = ({ users, deleteUser, editUser, editUID, roles, editRole, addRo
                       <FontAwesomeIcon icon={faEdit} />
                   </button>
                 }
+                {!user.roles.includes(ROLES.SUPERADMIN) &&
+                  <button onClick={(evt) => deleteUser(user.uid, evt)}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                }
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </Row>
+);
+
+const PendingList = ({ users, deleteUser, editUser, editUID, roles, editRole, addRole, roleEdit }) => (
+  <Row>
+    <Table striped={true}>
+      <thead>
+        <tr>
+          <th>User Name</th>
+          <th>Roles</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {users.map(user => (
+            <tr key={user.uid}>
+              <td>{user.uid.replace("*","@").replace(new RegExp(/\+\+/, "g"),".")}</td>
+              <td>
+                  {user.roles}
+              </td>
+              <td>
                 {!user.roles.includes(ROLES.SUPERADMIN) &&
                   <button onClick={(evt) => deleteUser(user.uid, evt)}>
                     <FontAwesomeIcon icon={faTrash} />
