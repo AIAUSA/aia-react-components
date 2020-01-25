@@ -52,10 +52,17 @@ class AdminPage extends Component {
     this.props.firebase.user(uid).remove();
   }
 
+  deletePendingUser = (uid, evt) => {
+    this.props.firebase.checkRole(uid.replace("@", "*").replace(/\./g,"++")).remove();
+  }
+
+
   addUser = () => {
-    var email = this.state.newUser.replace("@", "*").replace(/\./g,"++");
-    this.props.firebase.checkRole(email).set({ roles: this.state.newUserRole });
-    this.setState({newUser: '', newUserRole: '' });
+    if (this.state.newUser !== '') {
+      var email = this.state.newUser.replace("@", "*").replace(/\./g,"++");
+      this.props.firebase.checkRole(email).set({ roles: this.state.newUserRole });
+      this.setState({newUser: '', newUserRole: '' });
+    }
   }
 
   handleInputChange = event => {
@@ -127,6 +134,7 @@ class AdminPage extends Component {
                   </Col>
                   <Col xs="3">
                     <Input type="select" id="role" value={this.state.newUserRole} onChange={this.handleNewRoleChange}>
+                      <option key="0" value=""></option>
                       { roles.map(r => (
                           <option key={r} value={r}>{r}</option>
                       ))}
@@ -153,7 +161,7 @@ class AdminPage extends Component {
                      roles={roles} editRole={this.state.editRole} roleEdit={this.handleRoleEdit} addRole={this.addRole} />
                 )}
                 { this.state.pending && (
-                  <PendingList users={this.state.users} deleteUser={this.deleteUser} editUser={this.editUser} editUID={this.state.editUID}
+                  <PendingList users={this.state.users} deleteUser={this.deletePendingUser} editUser={this.editUser} editUID={this.state.editUID}
                      roles={roles} editRole={this.state.editRole} roleEdit={this.handleRoleEdit} addRole={this.addRole} />
                 )}
               </CardBody>
